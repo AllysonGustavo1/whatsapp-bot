@@ -1,0 +1,101 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# WhatsApp session data
+_IGNORE_*/
+*.data.json
+temp/
+
+# User data
+data/usuarios_ativos.json
+
+# Logs
+*.log
+logs/
+
+# Runtime
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# HTML capture files (obsolete)
+betesporte_html_*.txt
+*.html
+
+# Chrome/Selenium files
+chromedriver*
+geckodriver*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Cache
+.cache/
+.eslintcache/
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Session data
+session/
+.wa-session*
+.node-persist/
+_IGNORE_surebet_session/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# WhatsApp session files
+*.data.json
+
+# Chrome user data
+chrome_profile*/
+
+# Environment variables
+.env
+.env.local
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Python cache (if any)
+__pycache__/
+*.pyc
+
+# WhatsApp database files
+PyWhatKit_DB.txt
