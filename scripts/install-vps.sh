@@ -69,22 +69,46 @@ else
     log_success "Node.js já instalado: $(node --version)"
 fi
 
-# Instalar Google Chrome (método atualizado para Ubuntu 22.04)
-log_info "Instalando Google Chrome..."
-if ! command -v google-chrome &> /dev/null; then
-    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-    sudo apt update
-    sudo apt install -y google-chrome-stable
-    
-    if command -v google-chrome &> /dev/null; then
-        log_success "Chrome instalado: $(google-chrome --version)"
+# Verificar arquitetura
+ARCH=$(uname -m)
+log_info "Arquitetura detectada: $ARCH"
+
+# Instalar browser baseado na arquitetura
+log_info "Instalando browser compatível..."
+if [ "$ARCH" = "aarch64" ]; then
+    log_info "ARM64 detectado - Instalando Chromium..."
+    if ! command -v chromium-browser &> /dev/null && ! command -v google-chrome-stable &> /dev/null; then
+        sudo apt install -y chromium-browser
+        # Criar link simbólico para compatibilidade
+        sudo ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable
+        log_success "Chromium instalado para ARM64"
     else
-        log_error "Falha ao instalar Chrome"
-        exit 1
+        log_success "Browser já instalado"
+    fi
+elif [ "$ARCH" = "x86_64" ]; then
+    log_info "x86_64 detectado - Instalando Chrome..."
+    if ! command -v google-chrome &> /dev/null; then
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        sudo apt update
+        sudo apt install -y google-chrome-stable
+        log_success "Chrome instalado para x86_64"
+    else
+        log_success "Chrome já instalado: $(google-chrome --version)"
     fi
 else
-    log_success "Chrome já instalado: $(google-chrome --version)"
+    log_error "Arquitetura não suportada: $ARCH"
+    log_error "Suportadas: x86_64 (Intel/AMD) e aarch64 (ARM64)"
+    exit 1
+fi
+
+# Verificar se o browser foi instalado corretamente
+if command -v google-chrome-stable &> /dev/null; then
+    BROWSER_VERSION=$(google-chrome-stable --version 2>/dev/null || chromium-browser --version 2>/dev/null)
+    log_success "Browser instalado: $BROWSER_VERSION"
+else
+    log_error "Falha ao instalar browser"
+    exit 1
 fi
 
 # Instalar dependências adicionais para headless (Ubuntu 22.04 otimizado)

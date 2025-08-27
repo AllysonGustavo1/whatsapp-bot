@@ -11,11 +11,28 @@ sudo apt update && sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
 
-# 3. INSTALAÇÃO GOOGLE CHROME (método atualizado)
+# 3. INSTALAÇÃO BROWSER (detecta arquitetura automaticamente)
 
+# Verificar arquitetura
+
+ARCH=$(uname -m)
+echo "🔍 Arquitetura detectada: $ARCH"
+
+if [ "$ARCH" = "aarch64" ]; then
+echo "🔧 ARM64 detectado - Instalando Chromium..."
+sudo apt install -y chromium-browser # Criar link simbólico para compatibilidade
+sudo ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable
+echo "✅ Chromium instalado para ARM64"
+elif [ "$ARCH" = "x86_64" ]; then
+echo "🔧 x86_64 detectado - Instalando Chrome..."
 wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
 sudo apt update && sudo apt install -y google-chrome-stable
+echo "✅ Chrome instalado para x86_64"
+else
+echo "❌ Arquitetura não suportada: $ARCH"
+exit 1
+fi
 
 # 4. INSTALAÇÃO DE DEPENDÊNCIAS CHROME (Ubuntu 22.04 otimizado)
 

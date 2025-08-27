@@ -12,7 +12,6 @@ class WhatsAppService {
     try {
       console.log("🔄 Conectando ao WhatsApp...");
 
-      // Detectar ambiente e configurar Chrome adequadamente
       const isVPS = process.platform === "linux" && !process.env.DISPLAY;
       const chromeOptions = isVPS
         ? this.getVPSChromeConfig()
@@ -71,9 +70,25 @@ class WhatsAppService {
   }
 
   getVPSChromeConfig() {
-    // Configuração específica para VPS/Servidor Linux
+    const fs = require("fs");
+    let executablePath = "/usr/bin/google-chrome-stable";
+
+    if (!fs.existsSync("/usr/bin/google-chrome-stable")) {
+      if (fs.existsSync("/usr/bin/chromium-browser")) {
+        executablePath = "/usr/bin/chromium-browser";
+        console.log("🔧 Usando Chromium (ARM64 compatible)");
+      } else if (fs.existsSync("/usr/bin/chromium")) {
+        executablePath = "/usr/bin/chromium";
+        console.log("🔧 Usando Chromium");
+      } else {
+        console.log("❌ Nenhum browser encontrado");
+      }
+    } else {
+      console.log("🔧 Usando Google Chrome");
+    }
+
     return {
-      executablePath: "/usr/bin/google-chrome-stable",
+      executablePath: executablePath,
       args: [
         "--headless",
         "--no-sandbox",
@@ -98,7 +113,6 @@ class WhatsAppService {
   }
 
   getLocalChromeConfig() {
-    // Configuração para ambiente local/desenvolvimento
     return {
       executablePath: null, // Deixa o sistema encontrar automaticamente
       args: config.chrome.options,
@@ -119,16 +133,22 @@ class WhatsAppService {
 
   mostrarSolucoes() {
     console.log("💡 Possíveis soluções:");
-    console.log("   1. VPS Ubuntu - Execute os comandos:");
+    console.log("   🔍 Para detectar arquitetura: uname -m");
+    console.log("   📋 ARM64 (aarch64):");
+    console.log("      sudo apt install -y chromium-browser");
     console.log(
-      "      sudo apt update && sudo apt install -y google-chrome-stable"
+      "      sudo ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable"
+    );
+    console.log("   📋 x86_64 (Intel/AMD):");
+    console.log("      sudo apt install -y google-chrome-stable");
+    console.log("   2. Verifique se o browser está instalado:");
+    console.log(
+      "      google-chrome-stable --version || chromium-browser --version"
     );
     console.log(
-      "   2. Verifique se o Chrome está instalado: google-chrome --version"
+      "   3. Execute o script de instalação: bash scripts/install-vps.sh"
     );
-    console.log("   3. Feche outras instâncias do Chrome");
     console.log("   4. Reinicie o servidor se necessário");
-    console.log("   5. Verifique permissões de usuário");
   }
 
   async enviarMensagem(numero, mensagem) {

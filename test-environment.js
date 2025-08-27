@@ -4,42 +4,91 @@ const fs = require("fs");
 console.log("🔍 TESTE DE AMBIENTE - WHATSAPP BOT");
 console.log("===================================");
 
-// Detectar sistema operacional
+// Detectar sistema operacional e arquitetura
 const isLinux = process.platform === "linux";
 const isWindows = process.platform === "win32";
 const isVPS = isLinux && !process.env.DISPLAY;
+const { execSync } = require("child_process");
+
+let arch = "unknown";
+try {
+  arch = execSync("uname -m", { encoding: "utf8" }).trim();
+} catch (error) {
+  arch = process.arch;
+}
 
 console.log(`📱 Sistema: ${process.platform}`);
+console.log(`💻 Arquitetura: ${arch}`);
 console.log(`🖥️  Ambiente: ${isVPS ? "VPS/Servidor" : "Local"}`);
 console.log(`📦 Node.js: ${process.version}`);
 
-// Testar Chrome
-console.log("\n🌐 TESTANDO CHROME:");
+// Detectar tipo de arquitetura
+const isARM64 = arch === "aarch64" || arch === "arm64";
+const isX86_64 = arch === "x86_64" || arch === "amd64";
+
+if (isARM64) {
+  console.log("🔧 ARM64 detectado - Requer Chromium");
+} else if (isX86_64) {
+  console.log("🔧 x86_64 detectado - Pode usar Chrome ou Chromium");
+}
+
+// Testar Chrome/Chromium
+console.log("\n🌐 TESTANDO BROWSER:");
 try {
-  let chromeVersion;
+  let browserVersion;
   if (isLinux) {
+    // Tentar Google Chrome primeiro
     try {
-      chromeVersion = execSync("google-chrome --version", {
+      browserVersion = execSync("google-chrome-stable --version", {
         encoding: "utf8",
       }).trim();
-      console.log(`✅ Chrome encontrado: ${chromeVersion}`);
+      console.log(`✅ Chrome encontrado: ${browserVersion}`);
     } catch (error) {
-      console.log(
-        "❌ Chrome não encontrado. Execute: sudo apt install -y google-chrome-stable"
-      );
+      // Se Chrome não funcionar, tentar Chromium
+      try {
+        browserVersion = execSync("chromium-browser --version", {
+          encoding: "utf8",
+        }).trim();
+        console.log(`✅ Chromium encontrado: ${browserVersion}`);
+      } catch (chromiumError) {
+        if (isARM64) {
+          console.log(
+            "❌ Chromium não encontrado. Execute: sudo apt install -y chromium-browser"
+          );
+          console.log("💡 ARM64 requer Chromium (Chrome não suporta ARM64)");
+        } else {
+          console.log(
+            "❌ Browser não encontrado. Execute: sudo apt install -y google-chrome-stable"
+          );
+        }
+      }
     }
 
-    // Testar caminho do Chrome
-    if (fs.existsSync("/usr/bin/google-chrome-stable")) {
-      console.log("✅ Caminho do Chrome: /usr/bin/google-chrome-stable");
+    // Verificar caminhos dos executáveis
+    const possiblePaths = [
+      "/usr/bin/google-chrome-stable",
+      "/usr/bin/chromium-browser",
+      "/usr/bin/chromium",
+    ];
+
+    let foundPath = null;
+    for (const path of possiblePaths) {
+      if (fs.existsSync(path)) {
+        foundPath = path;
+        break;
+      }
+    }
+
+    if (foundPath) {
+      console.log(`✅ Executável encontrado: ${foundPath}`);
     } else {
-      console.log("❌ Chrome não encontrado em /usr/bin/google-chrome-stable");
+      console.log("❌ Nenhum executável de browser encontrado");
     }
   } else if (isWindows) {
     console.log("✅ Windows detectado - Chrome será detectado automaticamente");
   }
 } catch (error) {
-  console.log("❌ Erro ao verificar Chrome:", error.message);
+  console.log("❌ Erro ao verificar browser:", error.message);
 }
 
 // Testar dependências Node.js
