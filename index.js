@@ -89,7 +89,6 @@ async function handleMessage(message) {
     const messageFormatter = new MessageFormatter();
     let resposta = "";
 
-    // Processar comandos
     if (texto === "/start" || texto === "iniciar" || texto === "start") {
       const adicionado = adicionarUsuario(userId);
       resposta = adicionado
@@ -108,16 +107,14 @@ async function handleMessage(message) {
       );
     } else if (texto === "/help" || texto === "ajuda" || texto === "help") {
       resposta = messageFormatter.formatarAjuda();
-    } else {
-      // Mensagem padrão para comandos não reconhecidos
+    } else if (texto.startsWith("/")) {
       resposta =
-        "🤖 Comandos disponíveis:\n" +
+        "🤖 Comando não reconhecido. Comandos disponíveis:\n" +
         "• /start - Ativar alertas\n" +
         "• /stop - Desativar alertas\n" +
         "• /status - Ver status\n" +
         "• /help - Mostrar ajuda";
     }
-
     if (resposta) {
       await whatsappClient.sendText(userId, resposta);
       console.log(`📤 Resposta enviada para ${userId.substring(0, 15)}...`);
