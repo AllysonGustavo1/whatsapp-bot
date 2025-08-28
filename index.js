@@ -77,7 +77,22 @@ function removerUsuario(userId) {
 async function handleMessage(message) {
   try {
     const userId = message.from;
+
+    if (!message.body || typeof message.body !== "string") {
+      console.log(
+        `📨 Mensagem não-texto de ${userId.substring(0, 15)}... (ignorada)`
+      );
+      return;
+    }
+
     const texto = message.body.toLowerCase().trim();
+
+    if (!texto) {
+      console.log(
+        `📨 Mensagem vazia de ${userId.substring(0, 15)}... (ignorada)`
+      );
+      return;
+    }
 
     console.log(`📨 Mensagem de ${userId.substring(0, 15)}...: ${texto}`);
 
@@ -107,13 +122,6 @@ async function handleMessage(message) {
       );
     } else if (texto === "/help" || texto === "ajuda" || texto === "help") {
       resposta = messageFormatter.formatarAjuda();
-    } else if (texto.startsWith("/")) {
-      resposta =
-        "🤖 Comando não reconhecido. Comandos disponíveis:\n" +
-        "• /start - Ativar alertas\n" +
-        "• /stop - Desativar alertas\n" +
-        "• /status - Ver status\n" +
-        "• /help - Mostrar ajuda";
     }
     if (resposta) {
       await whatsappClient.sendText(userId, resposta);
