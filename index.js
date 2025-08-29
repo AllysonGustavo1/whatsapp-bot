@@ -104,18 +104,27 @@ async function handleMessage(message) {
     const messageFormatter = new MessageFormatter();
     let resposta = "";
 
+    const usuarios = carregarUsuarios();
+    const isUsuarioAutorizado = usuarios.includes(userId);
+
+    if (!isUsuarioAutorizado) {
+      console.log(
+        `🚫 Usuário não autorizado tentou usar comando: ${userId.substring(
+          0,
+          15
+        )}... - comando: ${texto}`
+      );
+      return;
+    }
+
     if (texto === "/start" || texto === "iniciar" || texto === "start") {
-      const adicionado = adicionarUsuario(userId);
-      resposta = adicionado
-        ? messageFormatter.formatarBoasVindas()
-        : "ℹ️ Você já está recebendo alertas de SUREBETs!";
+      resposta = "ℹ️ Você já está recebendo alertas de SUREBETs!";
     } else if (texto === "/stop" || texto === "parar" || texto === "stop") {
       const removido = removerUsuario(userId);
       resposta = removido
         ? messageFormatter.formatarDespedida()
         : "ℹ️ Você não estava recebendo alertas.";
     } else if (texto === "/status" || texto === "status") {
-      const usuarios = carregarUsuarios();
       resposta = messageFormatter.formatarStatus(
         monitorandoAtivo,
         usuarios.length

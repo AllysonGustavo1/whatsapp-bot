@@ -29,7 +29,7 @@ class MessageFormatter {
     return (
       `👋 ALERTAS DESATIVADOS!\n\n` +
       `❌ Você parou de receber SUREBETs\n\n` +
-      `💡 Use /start para reativar`
+      `⚠️ Para reativar, contate o administrador`
     );
   }
 
@@ -49,14 +49,13 @@ class MessageFormatter {
   formatarAjuda() {
     return (
       `🤖 SUREBET BOT - COMANDOS\n\n` +
-      `📋 COMANDOS:\n` +
-      `• /start - Ativar alertas\n` +
-      `• /stop - Desativar alertas\n` +
-      `• /status - Ver status\n` +
-      `• /help - Mostrar ajuda\n\n` +
+      `📋 COMANDOS DISPONÍVEIS:\n` +
+      `• /stop - Parar alertas (sair da lista)\n` +
+      `• /status - Ver status do sistema\n` +
+      `• /help - Mostrar esta ajuda\n\n` +
       `📊 INFORMAÇÕES:\n` +
-      `• Monitora SUREBETs automaticamente\n` +
-      `• Verificação a cada 30 segundos\n` +
+      `• Apenas usuários pré-cadastrados recebem alertas\n` +
+      `• Monitoramento automático a cada 30 segundos\n` +
       `• Detecção pelo indicador (x)\n\n` +
       `🌐 Site: BetEsporte.com`
     );
@@ -160,7 +159,7 @@ class MessageFormatter {
     return (
       `✅ Você parou de receber alertas!\n\n` +
       `❌ Alertas desativados para este número\n\n` +
-      `💡 Use /start para reativar`
+      `⚠️ Para reativar, contate o administrador`
     );
   }
 
