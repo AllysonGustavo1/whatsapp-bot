@@ -16,6 +16,7 @@ temp/
 
 # User data
 data/usuarios_ativos.json
+data/usuarios_ativos_vip.json
 
 # Logs
 *.log
