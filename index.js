@@ -179,7 +179,6 @@ async function enviarSurebets(surebets) {
       const oddAtual = parseFloat(surebet.odd);
       const agora = Date.now();
 
-      // Verificar se é uma SUREBET nova ou se a odd mudou
       let isNova = false;
       let oddMudou = false;
       let oddAnterior = null;
@@ -189,10 +188,11 @@ async function enviarSurebets(surebets) {
         oddAnterior = dadosAnteriores.odd;
 
         if (Math.abs(oddAtual - oddAnterior) > 0.01) {
-          // Mudança significativa na odd
           oddMudou = true;
+          const direcao = oddAtual > oddAnterior ? "SUBIU" : "DESCEU";
+          const emoji = oddAtual > oddAnterior ? "📈" : "📉";
           console.log(
-            `📈 ODD MUDOU: ${surebet.nome} - ${oddAnterior} → ${oddAtual}`
+            `${emoji} ODD ${direcao}: ${surebet.nome} - ${oddAnterior} → ${oddAtual}`
           );
         }
       } else {
@@ -200,30 +200,32 @@ async function enviarSurebets(surebets) {
         console.log(`🆕 NOVA SUREBET: ${surebet.nome} - Odd: ${oddAtual}`);
       }
 
-      // Atualizar histórico
       historicoSurebets.set(identificador, {
         odd: oddAtual,
         timestamp: agora,
       });
 
-      // Enviar apenas se for nova ou se a odd mudou
       if (isNova || oddMudou) {
-        let tipoMensagem = isNova ? "NOVA" : "ATUALIZADA";
-        let emojiTipo = isNova ? "🆕" : "📈";
+        let tipoMensagem;
+        if (isNova) {
+          tipoMensagem = "‼ NOVA ENTRADA DETECTADA ‼";
+        } else if (oddAtual > oddAnterior) {
+          tipoMensagem = "📈 ODD SUBIU 📈";
+        } else {
+          tipoMensagem = "📉 ODD DESCEU 📉";
+        }
+
+        let mercadoSimplificado = surebet.mercado;
+        const indexPara = surebet.mercado.toLowerCase().indexOf(" para ");
+        if (indexPara !== -1) {
+          mercadoSimplificado = surebet.mercado.substring(indexPara + 6);
+        }
 
         const mensagem =
-          `${emojiTipo} SUREBET ${tipoMensagem}!\n` +
-          `📅 ${new Date().toLocaleDateString(
-            "pt-BR"
-          )} às ${new Date().toLocaleTimeString("pt-BR")}\n` +
-          `⚽ Jogo: ${surebet.nome}\n` +
-          `🏷️ Mercado: ${surebet.mercado} - ${surebet.optionName}\n` +
-          `💸 Odd: ${surebet.odd}${
-            oddMudou ? ` (antes: ${oddAnterior})` : ""
-          }\n` +
-          `🌐 Fonte: BetEsporte.com\n` +
-          `⏱️ Próxima verificação em 30s\n` +
-          `💡 Use /stop para desativar alertas`;
+          `${tipoMensagem}\n` +
+          `⚽ Partida: ${surebet.nome}\n` +
+          `🎯 Mercado: ${mercadoSimplificado} - ${surebet.optionName}\n` +
+          `💸 Odd: ${surebet.odd}${oddMudou ? ` (antes: ${oddAnterior})` : ""}`;
 
         const hash = gerarHashSurebet(surebet);
 
@@ -253,11 +255,16 @@ async function enviarSurebets(surebets) {
           try {
             if (whatsappClient) {
               await whatsappClient.sendText(usuario, mensagem);
+              let tipoLog;
+              if (isNova) {
+                tipoLog = "NOVA ENTRADA";
+              } else if (oddAtual > oddAnterior) {
+                tipoLog = "ODD SUBIU";
+              } else {
+                tipoLog = "ODD DESCEU";
+              }
               console.log(
-                `📤 SUREBET ${tipoMensagem} enviada para ${usuario.substring(
-                  0,
-                  15
-                )}... ✅`
+                `📤 ${tipoLog} enviada para ${usuario.substring(0, 15)}... ✅`
               );
             } else {
               console.log(`📤 SIMULADO para ${usuario.substring(0, 15)}... ✅`);
