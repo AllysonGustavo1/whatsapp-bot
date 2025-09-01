@@ -109,10 +109,7 @@ async function handleMessage(message) {
 
     if (!isUsuarioAutorizado) {
       console.log(
-        `🚫 Usuário não autorizado tentou usar comando: ${userId.substring(
-          0,
-          15
-        )}... - comando: ${texto}`
+        `🚫 Usuário não autorizado tentou usar comando: ${userId} - comando: ${texto}`
       );
       return;
     }
@@ -218,12 +215,19 @@ async function enviarSurebets(surebets) {
         let mercadoSimplificado = surebet.mercado;
         const indexPara = surebet.mercado.toLowerCase().indexOf(" para ");
         if (indexPara !== -1) {
-          mercadoSimplificado = surebet.mercado.substring(indexPara + 6);
+          mercadoSimplificado =
+            "Para " + surebet.mercado.substring(indexPara + 6);
+        }
+
+        let nomePartida = surebet.nome;
+        const indexParaNome = surebet.nome.toLowerCase().indexOf(" para ");
+        if (indexParaNome !== -1) {
+          nomePartida = surebet.nome.substring(0, indexParaNome).trim();
         }
 
         const mensagem =
           `${tipoMensagem}\n` +
-          `⚽ Partida: ${surebet.nome}\n` +
+          `⚽ Partida: ${nomePartida}\n` +
           `🎯 Mercado: ${mercadoSimplificado} - ${surebet.optionName}\n` +
           `💸 Odd: ${surebet.odd}${oddMudou ? ` (antes: ${oddAnterior})` : ""}`;
 
