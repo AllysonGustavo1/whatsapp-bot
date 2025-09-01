@@ -16,6 +16,7 @@ let intervalId = null;
 
 let historicoSurebets = new Map();
 const mensagensEnviadasPorUsuario = {};
+const filaDeDelay = [];
 
 function criarIdentificadorSurebet(surebet) {
   return `${surebet.nome}|${surebet.mercado}|${surebet.optionName}`;
@@ -29,10 +30,22 @@ function carregarUsuarios() {
   try {
     const dados = fs.readFileSync("./data/usuarios_ativos.json", "utf8");
     const usuarios = JSON.parse(dados);
-    console.log(`👥 ${usuarios.length} usuário(s) carregados`);
+    console.log(`👥 ${usuarios.length} usuário(s) normais carregados`);
     return usuarios;
   } catch (error) {
     console.error("❌ Erro ao carregar usuários:", error.message);
+    return [];
+  }
+}
+
+function carregarUsuariosVIP() {
+  try {
+    const dados = fs.readFileSync("./data/usuarios_ativos_vip.json", "utf8");
+    const usuarios = JSON.parse(dados);
+    console.log(`⭐ ${usuarios.length} usuário(s) VIP carregados`);
+    return usuarios;
+  } catch (error) {
+    console.error("❌ Erro ao carregar usuários VIP:", error.message);
     return [];
   }
 }
@@ -46,6 +59,18 @@ function salvarUsuarios(usuarios) {
     console.log(`💾 Usuários salvos: ${usuarios.length}`);
   } catch (error) {
     console.error("❌ Erro ao salvar usuários:", error.message);
+  }
+}
+
+function salvarUsuariosVIP(usuarios) {
+  try {
+    fs.writeFileSync(
+      "./data/usuarios_ativos_vip.json",
+      JSON.stringify(usuarios, null, 2)
+    );
+    console.log(`💾 Usuários VIP salvos: ${usuarios.length}`);
+  } catch (error) {
+    console.error("❌ Erro ao salvar usuários VIP:", error.message);
   }
 }
 
@@ -105,7 +130,9 @@ async function handleMessage(message) {
     let resposta = "";
 
     const usuarios = carregarUsuarios();
-    const isUsuarioAutorizado = usuarios.includes(userId);
+    const usuariosVIP = carregarUsuariosVIP();
+    const isUsuarioAutorizado =
+      usuarios.includes(userId) || usuariosVIP.includes(userId);
 
     if (!isUsuarioAutorizado) {
       console.log(
@@ -165,8 +192,9 @@ async function enviarSurebets(surebets) {
     );
 
     const usuarios = carregarUsuarios();
+    const usuariosVIP = carregarUsuariosVIP();
 
-    if (usuarios.length === 0) {
+    if (usuarios.length === 0 && usuariosVIP.length === 0) {
       console.log("📋 Nenhum usuário ativo para notificar");
       return;
     }
@@ -233,7 +261,8 @@ async function enviarSurebets(surebets) {
 
         const hash = gerarHashSurebet(surebet);
 
-        for (const usuario of usuarios) {
+        // Enviar para usuários VIP imediatamente
+        for (const usuario of usuariosVIP) {
           if (!mensagensEnviadasPorUsuario[usuario]) {
             mensagensEnviadasPorUsuario[usuario] = new Set();
           }
@@ -249,7 +278,7 @@ async function enviarSurebets(surebets) {
 
           if (mensagensEnviadasPorUsuario[usuario].has(hash)) {
             console.log(
-              `⚠️ Mensagem duplicada detectada para: ${surebet.nome} (usuário: ${usuario})`
+              `⚠️ Mensagem duplicada detectada para usuário VIP: ${surebet.nome} (usuário: ${usuario})`
             );
             continue;
           }
@@ -268,19 +297,74 @@ async function enviarSurebets(surebets) {
                 tipoLog = "ODD DESCEU";
               }
               console.log(
-                `📤 ${tipoLog} enviada para ${usuario.substring(0, 15)}... ✅`
+                `📤 ${tipoLog} enviada para VIP ${usuario.substring(
+                  0,
+                  15
+                )}... ✅`
               );
             } else {
-              console.log(`📤 SIMULADO para ${usuario.substring(0, 15)}... ✅`);
+              console.log(
+                `📤 SIMULADO VIP para ${usuario.substring(0, 15)}... ✅`
+              );
               console.log(`   📝 ${mensagem.split("\n")[0]}`);
             }
             await new Promise((resolve) => setTimeout(resolve, 500));
           } catch (error) {
             console.error(
-              `❌ Erro ao enviar para ${usuario.substring(0, 15)}...:`,
+              `❌ Erro ao enviar para VIP ${usuario.substring(0, 15)}...:`,
               error.message
             );
           }
+        }
+
+        const agora = Date.now();
+        for (const usuario of usuarios) {
+          if (!mensagensEnviadasPorUsuario[usuario]) {
+            mensagensEnviadasPorUsuario[usuario] = new Set();
+          }
+
+          if (oddMudou) {
+            const hashesParaRemover = Array.from(
+              mensagensEnviadasPorUsuario[usuario]
+            ).filter((h) => h.startsWith(`${surebet.nome}|`));
+            hashesParaRemover.forEach((h) =>
+              mensagensEnviadasPorUsuario[usuario].delete(h)
+            );
+          }
+
+          if (mensagensEnviadasPorUsuario[usuario].has(hash)) {
+            console.log(
+              `⚠️ Mensagem duplicada detectada para usuário normal: ${surebet.nome} (usuário: ${usuario})`
+            );
+            continue;
+          }
+
+          mensagensEnviadasPorUsuario[usuario].add(hash);
+
+          filaDeDelay.push({
+            usuario,
+            mensagem,
+            timestamp: agora + 60000,
+            isNova,
+            oddAtual,
+            oddAnterior,
+            hash,
+          });
+
+          let tipoLog;
+          if (isNova) {
+            tipoLog = "NOVA ENTRADA";
+          } else if (oddAtual > oddAnterior) {
+            tipoLog = "ODD SUBIU";
+          } else {
+            tipoLog = "ODD DESCEU";
+          }
+          console.log(
+            `⏰ ${tipoLog} agendada para usuário normal ${usuario.substring(
+              0,
+              15
+            )}... (delay 60s)`
+          );
         }
       } else {
         console.log(
@@ -300,6 +384,55 @@ async function enviarSurebets(surebets) {
   }
 }
 
+async function processarFilaDeDelay() {
+  const agora = Date.now();
+  const mensagensParaEnviar = [];
+
+  for (let i = filaDeDelay.length - 1; i >= 0; i--) {
+    if (filaDeDelay[i].timestamp <= agora) {
+      mensagensParaEnviar.push(filaDeDelay[i]);
+      filaDeDelay.splice(i, 1);
+    }
+  }
+
+  // Enviar as mensagens
+  for (const item of mensagensParaEnviar) {
+    try {
+      if (whatsappClient) {
+        await whatsappClient.sendText(item.usuario, item.mensagem);
+        let tipoLog;
+        if (item.isNova) {
+          tipoLog = "NOVA ENTRADA";
+        } else if (item.oddAtual > item.oddAnterior) {
+          tipoLog = "ODD SUBIU";
+        } else {
+          tipoLog = "ODD DESCEU";
+        }
+        console.log(
+          `📤 ${tipoLog} enviada (após delay) para ${item.usuario.substring(
+            0,
+            15
+          )}... ✅`
+        );
+      } else {
+        console.log(
+          `📤 SIMULADO (após delay) para ${item.usuario.substring(0, 15)}... ✅`
+        );
+        console.log(`   📝 ${item.mensagem.split("\n")[0]}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } catch (error) {
+      console.error(
+        `❌ Erro ao enviar (após delay) para ${item.usuario.substring(
+          0,
+          15
+        )}...:`,
+        error.message
+      );
+    }
+  }
+}
+
 async function monitorarSurebetsAPI() {
   if (monitorandoAtivo) {
     console.log("⚠️ Monitoramento já está ativo");
@@ -311,6 +444,9 @@ async function monitorarSurebetsAPI() {
     try {
       const agora = new Date().toLocaleTimeString("pt-BR");
       console.log(`\n🔍 [${agora}] Verificando SUREBETs via API...`);
+
+      await processarFilaDeDelay();
+
       const eventos = await buscarSurebetsBetEsporte();
       const surebets = eventos.filter(
         (e) =>
