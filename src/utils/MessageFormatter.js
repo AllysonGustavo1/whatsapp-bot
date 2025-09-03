@@ -46,19 +46,33 @@ class MessageFormatter {
     );
   }
 
-  formatarAjuda() {
-    return (
+  formatarAjuda(isVIP = false) {
+    let mensagem =
       `🤖 SUREBET BOT - COMANDOS\n\n` +
       `📋 COMANDOS DISPONÍVEIS:\n` +
       `• /stop - Parar alertas (sair da lista)\n` +
       `• /status - Ver status do sistema\n` +
-      `• /help - Mostrar esta ajuda\n\n` +
-      `📊 INFORMAÇÕES:\n` +
+      `• /help - Mostrar esta ajuda\n`;
+
+    if (isVIP) {
+      mensagem +=
+        `\n⭐ COMANDOS VIP:\n` +
+        `• /stop oraculo - Parar oráculo das surebets\n`;
+    }
+
+    mensagem +=
+      `\n📊 INFORMAÇÕES:\n` +
       `• Apenas usuários pré-cadastrados recebem alertas\n` +
       `• Monitoramento automático a cada 30 segundos\n` +
-      `• Detecção pelo indicador (x)\n\n` +
-      `🌐 Site: BetEsporte.com`
-    );
+      `• Detecção pelo indicador (x)\n`;
+
+    if (isVIP) {
+      mensagem += `• VIPs têm acesso ao Oráculo das SUREBETs\n`;
+    }
+
+    mensagem += `\n🌐 Site: BetEsporte.com`;
+
+    return mensagem;
   }
 
   static criarMensagemSurebets(surebets, mudanca = false) {

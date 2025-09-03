@@ -1,5 +1,6 @@
 const { buscarSurebetsBetEsporte } = require("./src/core/BetEsporteAPI");
 const { WhatsAppService } = require("./src/services/WhatsAppService");
+const { OraculoService } = require("./src/services/OraculoService");
 const { MessageFormatter } = require("./src/utils/MessageFormatter");
 const config = require("./config/config");
 const fs = require("fs");
@@ -13,6 +14,7 @@ console.log("=".repeat(50));
 let whatsappClient = null;
 let monitorandoAtivo = false;
 let intervalId = null;
+let oraculoService = null;
 
 let historicoSurebets = new Map();
 const mensagensEnviadasPorUsuario = {};
@@ -133,6 +135,7 @@ async function handleMessage(message) {
     const usuariosVIP = carregarUsuariosVIP();
     const isUsuarioAutorizado =
       usuarios.includes(userId) || usuariosVIP.includes(userId);
+    const isUsuarioVIP = usuariosVIP.includes(userId);
 
     if (!isUsuarioAutorizado) {
       console.log(
@@ -154,7 +157,15 @@ async function handleMessage(message) {
         usuarios.length
       );
     } else if (texto === "/help" || texto === "ajuda" || texto === "help") {
-      resposta = messageFormatter.formatarAjuda();
+      resposta = messageFormatter.formatarAjuda(isUsuarioVIP);
+    } else if (texto === "/stop oraculo" && isUsuarioVIP) {
+      if (oraculoService && oraculoService.estaAtivo()) {
+        await oraculoService.parar();
+        resposta =
+          "🔮✨ Oráculo parado com sucesso! ✨🔮\n\nAs energias místicas foram desativadas.";
+      } else {
+        resposta = "🔮 O oráculo já está parado ou não foi iniciado.";
+      }
     }
     if (resposta) {
       await whatsappClient.sendText(userId, resposta);
@@ -170,13 +181,24 @@ async function enviarSurebets(surebets) {
     if (!surebets || surebets.length === 0) return;
 
     const surebetsInteressantes = surebets.filter((surebet) => {
+      const nomeContemTrave =
+        surebet.nome && surebet.nome.toLowerCase().includes("trave");
+      const mercadoContemTrave =
+        surebet.mercado && surebet.mercado.toLowerCase().includes("trave");
+      const optionContemTrave =
+        surebet.optionName &&
+        surebet.optionName.toLowerCase().includes("trave");
+
       return (
         !surebet.bloqueado &&
         surebet.odd &&
         parseFloat(surebet.odd) > 1.01 &&
         surebet.nome &&
         surebet.nome.length <= 100 &&
-        surebet.nome.includes("(x)")
+        surebet.nome.includes("(x)") &&
+        !nomeContemTrave &&
+        !mercadoContemTrave &&
+        !optionContemTrave
       );
     });
 
@@ -454,7 +476,8 @@ async function monitorarSurebetsAPI() {
           e.odd &&
           parseFloat(e.odd) > 1.01 &&
           e.nome &&
-          e.nome.length <= 100
+          e.nome.length <= 100 &&
+          !e.nome.toLowerCase().includes("trave")
       );
       if (surebets.length > 0) {
         console.log(
@@ -479,12 +502,20 @@ async function iniciarSistema() {
   try {
     console.log("\n🚀 INICIANDO SISTEMA FUNCIONAL...");
 
+    // Inicializar OraculoService
+    oraculoService = new OraculoService();
+    const usuariosVIP = carregarUsuariosVIP();
+    oraculoService.setUsuariosVIP(usuariosVIP);
+
     console.log("📱 Inicializando WhatsApp...");
     try {
       const whatsappService = new WhatsAppService();
       whatsappClient = await whatsappService.inicializar((client) => {
         whatsappClient = client;
         console.log("✅ WhatsApp conectado!");
+
+        // Configurar WhatsApp client no oráculo
+        oraculoService.setWhatsAppClient(client);
 
         console.log("🔧 Configurando handler de mensagens...");
         client.onMessage(handleMessage);
@@ -498,8 +529,11 @@ async function iniciarSistema() {
     console.log("🔍 Iniciando monitoramento de SUREBETs via API...");
     monitorarSurebetsAPI();
 
+    console.log("🔮 Iniciando Oráculo das SUREBETs para VIPs...");
+    await oraculoService.iniciar();
+
     console.log(
-      "✅ Sistema operacional - Monitoramento e comandos funcionando em PARALELO!"
+      "✅ Sistema operacional - Monitoramento, Oráculo e comandos funcionando em PARALELO!"
     );
   } catch (error) {
     console.error("❌ Erro ao iniciar sistema:", error.message);
@@ -511,6 +545,9 @@ process.on("SIGINT", async () => {
   if (intervalId) {
     clearInterval(intervalId);
   }
+  if (oraculoService && oraculoService.estaAtivo()) {
+    await oraculoService.parar();
+  }
   process.exit(0);
 });
 
@@ -518,6 +555,9 @@ process.on("SIGTERM", async () => {
   console.log("\n🛑 Encerrando sistema...");
   if (intervalId) {
     clearInterval(intervalId);
+  }
+  if (oraculoService && oraculoService.estaAtivo()) {
+    await oraculoService.parar();
   }
   process.exit(0);
 });
