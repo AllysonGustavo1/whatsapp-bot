@@ -195,7 +195,6 @@ async function enviarSurebets(surebets) {
         parseFloat(surebet.odd) > 1.01 &&
         surebet.nome &&
         surebet.nome.length <= 100 &&
-        surebet.nome.includes("(x)") &&
         !nomeContemTrave &&
         !mercadoContemTrave &&
         !optionContemTrave
@@ -238,13 +237,21 @@ async function enviarSurebets(surebets) {
           oddMudou = true;
           const direcao = oddAtual > oddAnterior ? "SUBIU" : "DESCEU";
           const emoji = oddAtual > oddAnterior ? "📈" : "📉";
+          const tipoSurebet = surebet.nome.includes("(x)")
+            ? "SUREBET"
+            : "POSSÍVEL SUREBET";
           console.log(
-            `${emoji} ODD ${direcao}: ${surebet.nome} - ${oddAnterior} → ${oddAtual}`
+            `${emoji} ODD ${direcao} (${tipoSurebet}): ${surebet.nome} - ${oddAnterior} → ${oddAtual}`
           );
         }
       } else {
         isNova = true;
-        console.log(`🆕 NOVA SUREBET: ${surebet.nome} - Odd: ${oddAtual}`);
+        const tipoSurebet = surebet.nome.includes("(x)")
+          ? "SUREBET"
+          : "POSSÍVEL SUREBET";
+        console.log(
+          `🆕 NOVA ${tipoSurebet}: ${surebet.nome} - Odd: ${oddAtual}`
+        );
       }
 
       historicoSurebets.set(identificador, {
@@ -254,12 +261,26 @@ async function enviarSurebets(surebets) {
 
       if (isNova || oddMudou) {
         let tipoMensagem;
+        const temX = surebet.nome.includes("(x)");
+
         if (isNova) {
-          tipoMensagem = "‼ NOVA ENTRADA DETECTADA ‼";
+          if (temX) {
+            tipoMensagem = "‼ NOVA ENTRADA DETECTADA ‼";
+          } else {
+            tipoMensagem = "⚠️ NOVA SUPERODD ⚠️";
+          }
         } else if (oddAtual > oddAnterior) {
-          tipoMensagem = "📈 ODD SUBIU 📈";
+          if (temX) {
+            tipoMensagem = "📈 ODD SUBIU 📈";
+          } else {
+            tipoMensagem = "⚠️ ODD SUBIU ⚠️";
+          }
         } else {
-          tipoMensagem = "📉 ODD DESCEU 📉";
+          if (temX) {
+            tipoMensagem = "📉 ODD DESCEU 📉";
+          } else {
+            tipoMensagem = "⚠️ ODD DESCEU ⚠️";
+          }
         }
 
         let mercadoSimplificado = surebet.mercado;
@@ -311,12 +332,15 @@ async function enviarSurebets(surebets) {
             if (whatsappClient) {
               await whatsappClient.sendText(usuario, mensagem);
               let tipoLog;
+              const tipoSurebet = surebet.nome.includes("(x)")
+                ? "ENTRADA"
+                : "POSSÍVEL";
               if (isNova) {
-                tipoLog = "NOVA ENTRADA";
+                tipoLog = `NOVA ${tipoSurebet}`;
               } else if (oddAtual > oddAnterior) {
-                tipoLog = "ODD SUBIU";
+                tipoLog = `ODD SUBIU (${tipoSurebet})`;
               } else {
-                tipoLog = "ODD DESCEU";
+                tipoLog = `ODD DESCEU (${tipoSurebet})`;
               }
               console.log(
                 `📤 ${tipoLog} enviada para VIP ${usuario.substring(
@@ -371,15 +395,19 @@ async function enviarSurebets(surebets) {
             oddAtual,
             oddAnterior,
             hash,
+            temX: surebet.nome.includes("(x)"),
           });
 
           let tipoLog;
+          const tipoSurebet = surebet.nome.includes("(x)")
+            ? "ENTRADA"
+            : "POSSÍVEL";
           if (isNova) {
-            tipoLog = "NOVA ENTRADA";
+            tipoLog = `NOVA ${tipoSurebet}`;
           } else if (oddAtual > oddAnterior) {
-            tipoLog = "ODD SUBIU";
+            tipoLog = `ODD SUBIU (${tipoSurebet})`;
           } else {
-            tipoLog = "ODD DESCEU";
+            tipoLog = `ODD DESCEU (${tipoSurebet})`;
           }
           console.log(
             `⏰ ${tipoLog} agendada para usuário normal ${usuario.substring(
@@ -389,8 +417,11 @@ async function enviarSurebets(surebets) {
           );
         }
       } else {
+        const tipoSurebet = surebet.nome.includes("(x)")
+          ? "SUREBET"
+          : "POSSÍVEL SUREBET";
         console.log(
-          `✅ SUREBET já conhecida sem mudança: ${surebet.nome} - Odd: ${oddAtual}`
+          `✅ ${tipoSurebet} já conhecida sem mudança: ${surebet.nome} - Odd: ${oddAtual}`
         );
       }
     }
@@ -423,12 +454,13 @@ async function processarFilaDeDelay() {
       if (whatsappClient) {
         await whatsappClient.sendText(item.usuario, item.mensagem);
         let tipoLog;
+        const tipoSurebet = item.temX ? "ENTRADA" : "POSSÍVEL";
         if (item.isNova) {
-          tipoLog = "NOVA ENTRADA";
+          tipoLog = `NOVA ${tipoSurebet}`;
         } else if (item.oddAtual > item.oddAnterior) {
-          tipoLog = "ODD SUBIU";
+          tipoLog = `ODD SUBIU (${tipoSurebet})`;
         } else {
-          tipoLog = "ODD DESCEU";
+          tipoLog = `ODD DESCEU (${tipoSurebet})`;
         }
         console.log(
           `📤 ${tipoLog} enviada (após delay) para ${item.usuario.substring(
@@ -495,7 +527,7 @@ async function monitorarSurebetsAPI() {
         error.message
       );
     }
-  }, 30000);
+  }, 5000);
 }
 
 async function iniciarSistema() {
